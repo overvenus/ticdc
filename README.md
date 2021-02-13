@@ -5,6 +5,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/pingcap/ticdc/badge.svg)](https://coveralls.io/github/pingcap/ticdc)
 [![LICENSE](https://img.shields.io/github/license/pingcap/ticdc.svg)](https://github.com/pingcap/ticdc/blob/master/LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/pingcap/ticdc)](https://goreportcard.com/report/github.com/pingcap/ticdc)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fovervenus%2Fticdc.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fovervenus%2Fticdc?ref=badge_shield)
 
 **TiCDC** is [TiDB](https://docs.pingcap.com/tidb/stable)'s change data capture framework. It supports replicating change data to various downstreams, including MySQL protocol-compatible databases, message queues via the open CDC protocol and other systems such as local file storage.
 
@@ -81,3 +82,6 @@ for details on submitting patches and the contribution workflow.
 ## License
 
 TiCDC is under the Apache 2.0 license. See the [LICENSE](./LICENSE) file for details.
+
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fovervenus%2Fticdc.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fovervenus%2Fticdc?ref=badge_large)
