@@ -65,7 +65,7 @@ func (n *mounterNode) Init(ctx pipeline.NodeContext) error {
 		log.Panic("unexpected error", zap.Error(err))
 	}
 
-	n.wg.Go(func() error {
+	go func() error {
 		defer receiver.Stop()
 		for {
 			select {
@@ -106,7 +106,7 @@ func (n *mounterNode) Init(ctx pipeline.NodeContext) error {
 				}
 			}
 		}
-	})
+	}()
 
 	return nil
 }

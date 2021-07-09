@@ -51,17 +51,17 @@ func newDDLHandler(pdCli pd.Client, credential *security.Credential, kvStorage t
 		cancel: cancel,
 	}
 	// Set it up so that one failed goroutine cancels all others sharing the same ctx
-	errg, ctx := errgroup.WithContext(ctx)
+	// errg, ctx := errgroup.WithContext(ctx)
 	ctx = util.PutTableInfoInCtx(ctx, -1, "")
 
 	// FIXME: user of ddlHandler can't know error happen.
-	errg.Go(func() error {
+	go func() error {
 		return plr.Run(ctx)
-	})
+	}()
 
 	rawDDLCh := puller.SortOutput(ctx, plr.Output())
 
-	errg.Go(func() error {
+	go func() error {
 		for {
 			select {
 			case <-ctx.Done():
@@ -76,8 +76,8 @@ func newDDLHandler(pdCli pd.Client, credential *security.Credential, kvStorage t
 				}
 			}
 		}
-	})
-	h.wg = errg
+	}()
+	// h.wg = errg
 	return h
 }
 

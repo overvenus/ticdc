@@ -416,7 +416,7 @@ func runMerger(ctx context.Context, numSorters int, in <-chan *flushTask, out ch
 	defer resolvedTsNotifier.Close()
 	errg, ctx := errgroup.WithContext(ctx)
 
-	errg.Go(func() error {
+	go func() error {
 		for {
 			var task *flushTask
 			select {
@@ -453,9 +453,9 @@ func runMerger(ctx context.Context, numSorters int, in <-chan *flushTask, out ch
 				resolvedTsNotifier.Notify()
 			}
 		}
-	})
+	}()
 
-	errg.Go(func() error {
+	go func() error {
 		resolvedTsReceiver, err := resolvedTsNotifier.NewReceiver(time.Second * 1)
 		if err != nil {
 			if cerrors.ErrOperateOnClosedNotifier.Equal(err) {
@@ -487,8 +487,12 @@ func runMerger(ctx context.Context, numSorters int, in <-chan *flushTask, out ch
 				}
 			}
 		}
-	})
+	}()
 
+	select {
+	case <-ctx.Done():
+		return errors.Trace(ctx.Err())
+	}
 	return errg.Wait()
 }
 

@@ -309,30 +309,34 @@ func (s *Server) run(ctx context.Context) (err error) {
 
 	wg, cctx := errgroup.WithContext(ctx)
 	if config.NewReplicaImpl {
-		wg.Go(func() error {
+		go func() error {
 			return s.captureV2.Run(cctx)
-		})
+		}()
 	} else {
-		wg.Go(func() error {
+		go func() error {
 			return s.campaignOwnerLoop(cctx)
-		})
+		}()
 
-		wg.Go(func() error {
+		go func() error {
 			return s.capture.Run(cctx)
-		})
+		}()
 	}
-	wg.Go(func() error {
+	go func() error {
 		return s.etcdHealthChecker(cctx)
-	})
+	}()
 
-	wg.Go(func() error {
+	go func() error {
 		return sorter.RunWorkerPool(cctx)
-	})
+	}()
 
-	wg.Go(func() error {
+	go func() error {
 		return kv.RunWorkerPool(cctx)
-	})
+	}()
 
+	select {
+	case <-ctx.Done():
+		return errors.Trace(ctx.Err())
+	}
 	return wg.Wait()
 }
 

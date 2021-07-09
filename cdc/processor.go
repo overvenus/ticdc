@@ -250,35 +250,35 @@ func (p *oldProcessor) Run(ctx context.Context) {
 		context.WithCancel(util.PutTableInfoInCtx(cctx, 0, "ticdc-processor-ddl"))
 	p.ddlPullerCancel = ddlPullerCancel
 
-	wg.Go(func() error {
+	go func() error {
 		return p.positionWorker(cctx)
-	})
-
-	wg.Go(func() error {
-		return p.globalStatusWorker(cctx)
-	})
-
-	wg.Go(func() error {
-		return p.ddlPuller.Run(ddlPullerCtx)
-	})
-
-	wg.Go(func() error {
-		return p.ddlPullWorker(cctx)
-	})
-
-	wg.Go(func() error {
-		return p.mounter.Run(cctx)
-	})
-
-	wg.Go(func() error {
-		return p.workloadWorker(cctx)
-	})
-
-	go func() {
-		if err := wg.Wait(); err != nil {
-			p.sendError(err)
-		}
 	}()
+
+	go func() error {
+		return p.globalStatusWorker(cctx)
+	}()
+
+	go func() error {
+		return p.ddlPuller.Run(ddlPullerCtx)
+	}()
+
+	go func() error {
+		return p.ddlPullWorker(cctx)
+	}()
+
+	go func() error {
+		return p.mounter.Run(cctx)
+	}()
+
+	go func() error {
+		return p.workloadWorker(cctx)
+	}()
+
+	// go func() {
+	// 	if err := wg.Wait(); err != nil {
+	// 		p.sendError(err)
+	// 	}
+	// }()
 }
 
 // wait blocks until all routines in processor are returned

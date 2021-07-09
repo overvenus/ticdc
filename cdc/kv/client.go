@@ -600,15 +600,15 @@ func (s *eventFeedSession) eventFeed(ctx context.Context, ts uint64) error {
 
 	g, ctx := errgroup.WithContext(ctx)
 
-	g.Go(func() error {
+	go func() error {
 		return s.dispatchRequest(ctx, g)
-	})
+	}()
 
-	g.Go(func() error {
+	go func() error {
 		return s.requestRegionToStore(ctx, g)
-	})
+	}()
 
-	g.Go(func() error {
+	go func() error {
 		for {
 			select {
 			case <-ctx.Done():
@@ -623,14 +623,14 @@ func (s *eventFeedSession) eventFeed(ctx context.Context, ts uint64) error {
 				// region lock keeps the region access sequence.
 				// Besides the count or frequency of range request is limitted,
 				// we use ephemeral goroutine instead of permanent gourotine.
-				g.Go(func() error {
+				go func() error {
 					return s.divideAndSendEventFeedToRegions(ctx, task.span, task.ts)
-				})
+				}()
 			}
 		}
-	})
+	}()
 
-	g.Go(func() error {
+	go func() error {
 		for {
 			select {
 			case <-ctx.Done():
@@ -643,16 +643,20 @@ func (s *eventFeedSession) eventFeed(ctx context.Context, ts uint64) error {
 				}
 			}
 		}
-	})
+	}()
 
-	g.Go(func() error {
+	go func() error {
 		return s.regionRouter.Run(ctx)
-	})
+	}()
 
 	s.requestRangeCh <- rangeRequestTask{span: s.totalSpan, ts: ts}
 	s.rangeChSizeGauge.Inc()
 
-	return g.Wait()
+	select {
+	case <-ctx.Done():
+		return errors.Trace(ctx.Err())
+	}
+	// return g.Wait()
 }
 
 // scheduleDivideRegionAndRequest schedules a range to be divided by regions, and these regions will be then scheduled
@@ -850,12 +854,12 @@ func (s *eventFeedSession) requestRegionToStore(
 			s.addStream(rpcCtx.Addr, stream, streamCancel)
 
 			limiter := s.client.getRegionLimiter(regionID)
-			g.Go(func() error {
+			go func() error {
 				if !s.enableKVClientV2 {
 					return s.receiveFromStream(ctx, g, rpcCtx.Addr, getStoreID(rpcCtx), stream, pendingRegions, limiter)
 				}
 				return s.receiveFromStreamV2(ctx, g, rpcCtx.Addr, getStoreID(rpcCtx), stream, pendingRegions, limiter)
-			})
+			}()
 		}
 
 		state := newRegionFeedState(sri, requestID)
@@ -1384,9 +1388,9 @@ func (s *eventFeedSession) sendRegionChangeEvent(
 		// Then spawn the goroutine to process messages of this region.
 		regionStates[event.RegionId] = state
 
-		g.Go(func() error {
+		go func() error {
 			return s.partialRegionFeed(ctx, state, limiter)
-		})
+		}()
 	} else if state.isStopped() {
 		log.Warn("drop event due to region feed stopped",
 			zap.Uint64("regionID", event.RegionId),

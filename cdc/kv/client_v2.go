@@ -188,9 +188,9 @@ func (s *eventFeedSession) receiveFromStreamV2(
 	// to call exactly once from outter code logic
 	worker := newRegionWorker(s, limiter, addr)
 
-	g.Go(func() error {
+	go func() error {
 		return worker.run(ctx)
-	})
+	}()
 
 	for {
 		cevent, err := stream.Recv()

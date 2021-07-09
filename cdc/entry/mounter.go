@@ -160,15 +160,19 @@ const defaultMounterWorkerNum = 32
 func (m *mounterImpl) Run(ctx context.Context) error {
 	m.tz = util.TimezoneFromCtx(ctx)
 	errg, ctx := errgroup.WithContext(ctx)
-	errg.Go(func() error {
+	go func() error {
 		m.collectMetrics(ctx)
 		return nil
-	})
+	}()
 	for i := 0; i < m.workerNum; i++ {
 		index := i
-		errg.Go(func() error {
+		go func() error {
 			return m.codecWorker(ctx, index)
-		})
+		}()
+	}
+	select {
+	case <-ctx.Done():
+		return errors.Trace(ctx.Err())
 	}
 	return errg.Wait()
 }

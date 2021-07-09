@@ -89,9 +89,9 @@ func (h *ddlPullerImpl) Run(ctx cdcContext.Context) error {
 	errg, stdCtx := errgroup.WithContext(stdCtx)
 	ctx = cdcContext.WithStd(ctx, stdCtx)
 
-	errg.Go(func() error {
+	go func() error {
 		return h.puller.Run(ctx)
-	})
+	}()
 
 	rawDDLCh := puller.SortOutput(ctx, h.puller.Output())
 
@@ -124,7 +124,7 @@ func (h *ddlPullerImpl) Run(ctx cdcContext.Context) error {
 		return nil
 	}
 
-	errg.Go(func() error {
+	go func() error {
 		for {
 			select {
 			case <-ctx.Done():
@@ -135,8 +135,11 @@ func (h *ddlPullerImpl) Run(ctx cdcContext.Context) error {
 				}
 			}
 		}
-	})
-
+	}()
+	select {
+	case <-ctx.Done():
+		return errors.Trace(ctx.Err())
+	}
 	return errg.Wait()
 }
 

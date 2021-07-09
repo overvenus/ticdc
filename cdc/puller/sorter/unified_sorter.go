@@ -173,7 +173,7 @@ func (s *UnifiedSorter) Run(ctx context.Context) error {
 		}
 	}
 
-	errg.Go(func() error {
+	go func() error {
 		defer func() {
 			// cancelling the heapSorters from the outside
 			for _, hs := range heapSorters {
@@ -190,13 +190,13 @@ func (s *UnifiedSorter) Run(ctx context.Context) error {
 		case err := <-heapSorterErrCh:
 			return errors.Trace(err)
 		}
-	})
+	}()
 
-	errg.Go(func() error {
+	go func() error {
 		return printError(runMerger(subctx, numConcurrentHeaps, heapSorterCollectCh, s.outputCh, ioCancelFunc))
-	})
+	}()
 
-	errg.Go(func() error {
+	go func() error {
 		captureAddr := util.CaptureAddrFromCtx(ctx)
 		changefeedID := util.ChangefeedIDFromCtx(ctx)
 		_, tableName := util.TableIDFromCtx(ctx)
@@ -255,8 +255,11 @@ func (s *UnifiedSorter) Run(ctx context.Context) error {
 				}
 			}
 		}
-	})
-
+	}()
+	select {
+	case <-ctx.Done():
+		return errors.Trace(ctx.Err())
+	}
 	return printError(errg.Wait())
 }
 
@@ -278,14 +281,18 @@ func (s *UnifiedSorter) Output() <-chan *model.PolymorphicEvent {
 // It **must** be running for Unified Sorter to work.
 func RunWorkerPool(ctx context.Context) error {
 	lazyInitWorkerPool()
-	errg, ctx := errgroup.WithContext(ctx)
-	errg.Go(func() error {
+	// errg, ctx := errgroup.WithContext(ctx)
+	go func() error {
 		return errors.Trace(heapSorterPool.Run(ctx))
-	})
+	}()
 
-	errg.Go(func() error {
+	go func() error {
 		return errors.Trace(heapSorterIOPool.Run(ctx))
-	})
+	}()
 
-	return errors.Trace(errg.Wait())
+	select {
+	case <-ctx.Done():
+		return errors.Trace(ctx.Err())
+	}
+	// return errors.Trace(errg.Wait())
 }

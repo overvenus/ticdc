@@ -63,15 +63,18 @@ func (p *defaultPoolImpl) Run(ctx context.Context) error {
 
 	for _, worker := range p.workers {
 		workerFinal := worker
-		errg.Go(func() error {
+		go func() error {
 			err := workerFinal.run(ctx)
 			if err != nil {
 				return errors.Trace(err)
 			}
 			return nil
-		})
+		}()
 	}
-
+	select {
+	case <-ctx.Done():
+		return errors.Trace(ctx.Err())
+	}
 	return errg.Wait()
 }
 

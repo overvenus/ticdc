@@ -110,16 +110,16 @@ func (p *defaultAsyncPoolImpl) Run(ctx context.Context) error {
 
 	for _, worker := range p.workers {
 		workerFinal := worker
-		errg.Go(func() error {
+		go func() error {
 			err := workerFinal.run()
 			if err != nil && cerrors.ErrAsyncPoolExited.NotEqual(errors.Cause(err)) {
 				errCh <- err
 			}
 			return nil
-		})
+		}()
 	}
 
-	errg.Go(func() error {
+	go func() error {
 		var err error
 		select {
 		case <-ctx.Done():
@@ -132,8 +132,11 @@ func (p *defaultAsyncPoolImpl) Run(ctx context.Context) error {
 		}
 
 		return err
-	})
-
+	}()
+	select {
+	case <-ctx.Done():
+		return errors.Trace(ctx.Err())
+	}
 	return errors.Trace(errg.Wait())
 }
 

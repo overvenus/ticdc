@@ -543,15 +543,19 @@ func (w *regionWorker) run(parentCtx context.Context) error {
 	wg, ctx := errgroup.WithContext(parentCtx)
 	w.initMetrics(ctx)
 	w.initPoolHandles(ctx, w.concurrent)
-	wg.Go(func() error {
+	go func() error {
 		return w.checkErrorReconnect(w.resolveLock(ctx))
-	})
-	wg.Go(func() error {
+	}()
+	go func() error {
 		return w.eventHandler(ctx)
-	})
-	wg.Go(func() error {
+	}()
+	go func() error {
 		return w.collectWorkpoolError(ctx)
-	})
+	}()
+	select {
+	case <-ctx.Done():
+		return errors.Trace(ctx.Err())
+	}
 	err := wg.Wait()
 	// ErrRegionWorkerExit means the region worker exits normally, but we don't
 	// need to terminate the other goroutines in errgroup
@@ -778,8 +782,12 @@ func RunWorkerPool(ctx context.Context) error {
 	}
 	InitWorkerPool()
 	errg, ctx := errgroup.WithContext(ctx)
-	errg.Go(func() error {
+	go func() error {
 		return errors.Trace(regionWorkerPool.Run(ctx))
-	})
+	}()
+	select {
+	case <-ctx.Done():
+		return errors.Trace(ctx.Err())
+	}
 	return errg.Wait()
 }

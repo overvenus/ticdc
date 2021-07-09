@@ -121,9 +121,9 @@ func (p *pullerImpl) Run(ctx context.Context) error {
 	for _, span := range p.spans {
 		span := span
 
-		g.Go(func() error {
+		go func() error {
 			return p.kvCli.EventFeed(ctx, span, checkpointTs, p.enableOldValue, lockresolver, p, eventCh)
-		})
+		}()
 	}
 
 	captureAddr := util.CaptureAddrFromCtx(ctx)
@@ -144,7 +144,7 @@ func (p *pullerImpl) Run(ctx context.Context) error {
 		txnCollectCounter.DeleteLabelValues(captureAddr, changefeedID, tableName, "kv")
 		txnCollectCounter.DeleteLabelValues(captureAddr, changefeedID, tableName, "resolved")
 	}()
-	g.Go(func() error {
+	go func() error {
 		for {
 			select {
 			case <-ctx.Done():
@@ -155,10 +155,10 @@ func (p *pullerImpl) Run(ctx context.Context) error {
 				metricPullerResolvedTs.Set(float64(oracle.ExtractPhysical(atomic.LoadUint64(&p.resolvedTs))))
 			}
 		}
-	})
+	}()
 
 	lastResolvedTs := p.checkpointTs
-	g.Go(func() error {
+	go func() error {
 		output := func(raw *model.RawKVEntry) error {
 			// even after https://github.com/pingcap/ticdc/pull/2038, kv client
 			// could still miss region change notification, which leads to resolved
@@ -238,7 +238,11 @@ func (p *pullerImpl) Run(ctx context.Context) error {
 				atomic.StoreUint64(&p.resolvedTs, resolvedTs)
 			}
 		}
-	})
+	}()
+	select {
+	case <-ctx.Done():
+		return errors.Trace(ctx.Err())
+	}
 	return g.Wait()
 }
 
