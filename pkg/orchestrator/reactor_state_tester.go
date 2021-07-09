@@ -16,10 +16,8 @@ package orchestrator
 import (
 	"github.com/pingcap/check"
 	"github.com/pingcap/errors"
-	"github.com/pingcap/log"
 	cerrors "github.com/pingcap/ticdc/pkg/errors"
 	"github.com/pingcap/ticdc/pkg/orchestrator/util"
-	"go.uber.org/zap"
 )
 
 // ReactorStateTester is a helper struct for unit-testing an implementer of ReactorState
@@ -107,11 +105,7 @@ RetryLoop:
 
 // MustApplyPatches calls ApplyPatches and must successfully
 func (t *ReactorStateTester) MustApplyPatches() {
-	err := t.ApplyPatches()
-	if err != nil {
-		log.Error("error!", zap.Error(err))
-	}
-	t.c.Assert(err, check.IsNil)
+	t.c.Assert(t.ApplyPatches(), check.IsNil)
 }
 
 // MustUpdate calls Update and must successfully
